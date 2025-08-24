@@ -1,0 +1,10 @@
+pandas
+numpy
+boto3
+scikit-learn
+python-dotenv
+pyyaml
+seaborn
+matplotlib
+imbalanced-learn
+mlflow
