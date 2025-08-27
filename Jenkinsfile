@@ -115,19 +115,4 @@ pipeline {
         }
     }
 
-    post {
-        always {
-            script {
-                echo 'Cleaning up...'
-                sh '''
-                # Nettoyage Docker (seulement si les permissions sont disponibles)
-                if docker info >/dev/null 2>&1; then
-                    docker system prune -f
-                else
-                    echo "Docker not available for cleanup"
-                fi
-                '''
-            }
-        }
-    }
 }
