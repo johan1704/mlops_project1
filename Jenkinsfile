@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         VENV_DIR = 'venv'
-        AWS_REGION = 'us-north-1'
+        AWS_REGION = 'eu-north-1'
         AWS_ACCOUNT_ID = '297984596884'
         ECR_REPO_NAME = 'mlops-project'
         ECS_CLUSTER = 'arn:aws:ecs:eu-north-1:297984596884:cluster/mlops-cluster'
