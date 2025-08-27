@@ -6,7 +6,7 @@ pipeline {
         AWS_REGION = 'us-east-1'
         AWS_ACCOUNT_ID = '297984596884'
         ECR_REPO_NAME = 'mlops-project'
-        ECS_CLUSTER = 'mlops-cluster'
+        ECS_CLUSTER = 'arn:aws:ecs:eu-north-1:297984596884:cluster/mlops-cluster'
         ECS_SERVICE = 'ml-project-task-service-f57ehlbn'
     }
 
