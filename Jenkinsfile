@@ -1,4 +1,4 @@
-pipeline{
+pipeline {
     agent any
     
     environment {
@@ -6,22 +6,24 @@ pipeline{
         AWS_REGION = 'us-east-1'
         AWS_ACCOUNT_ID = '297984596884'
         ECR_REPO_NAME = 'mlops-project'
+        ECS_CLUSTER = 'mlops-cluster'
+        ECS_SERVICE = 'ml-project-task-service-f57ehlbn'
     }
 
-    stages{
-        stage('cloning github repo to jenkins'){
-            steps{
-                script{
-                    echo 'cloning github repo ..'
+    stages {
+        stage('Cloning Github repo to Jenkins') {
+            steps {
+                script {
+                    echo 'Cloning github repo to Jenkins..'
                     checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[credentialsId: 'github-token', url: 'https://github.com/johan1704/mlops_project1.git']])
                 }
             }
         }
 
-        stage('setting up our venv environment and dependencies'){
-            steps{
-                script{
-                    echo 'setting up our venv environment and dependencies ..'
+        stage('Setting up our venv environment and dependencies') {
+            steps {
+                script {
+                    echo 'Setting up our venv environment and dependencies..'
                     sh '''
                     python -m venv ${VENV_DIR}
                     . ${VENV_DIR}/bin/activate
@@ -31,22 +33,23 @@ pipeline{
                 }
             }
         }
+
         stage('Building and Pushing Docker Image to Amazon ECR') {
             steps {
                 withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
+                    $class: 'UsernamePasswordMultiBinding',
                     credentialsId: 'aws-key',
-                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                    usernameVariable: 'AWS_ACCESS_KEY_ID',
+                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                 ]]) {
                     script {
                         echo 'Building and Pushing Docker Image to Amazon ECR.............'
                         sh '''
-                        # Configure AWS CLI
-                        aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}
-                        aws configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}
-                        aws configure set region ${AWS_REGION}
-
+                        # Configure AWS environment variables
+                        export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+                        export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+                        export AWS_DEFAULT_REGION=${AWS_REGION}
+                        
                         # Login to ECR
                         aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
@@ -70,29 +73,26 @@ pipeline{
                 withCredentials([[
                     $class: 'UsernamePasswordMultiBinding',
                     credentialsId: 'aws-key',
-                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                    usernameVariable: 'AWS_ACCESS_KEY_ID',
+                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                 ]]) {
                     script {
                         echo 'Deploy to AWS ECS/Fargate.............'
                         sh '''
-                        # Configure AWS CLI
-                        aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}
-                        aws configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}
-                        aws configure set region ${AWS_REGION}
+                        # Configure AWS environment variables
+                        export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+                        export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+                        export AWS_DEFAULT_REGION=${AWS_REGION}
 
                         # Update ECS service with new task definition
-                        # This assumes you already have an ECS cluster and service set up
                         aws ecs update-service \
-                            --cluster mlops-cluster \
-                            --service ml-project-task-service-f57ehlbn \
+                            --cluster ${ECS_CLUSTER} \
+                            --service ${ECS_SERVICE} \
                             --force-new-deployment
                         '''
                     }
                 }
             }
-        }
-
         }
     }
 
@@ -104,3 +104,4 @@ pipeline{
             }
         }
     }
+}
