@@ -20,6 +20,19 @@ pipeline {
             }
         }
 
+        stage('Setting up Docker permissions') {
+            steps {
+                script {
+                    echo 'Setting up Docker permissions..'
+                    sh '''
+                    # Ajouter l'utilisateur jenkins au groupe docker
+                    sudo usermod -a -G docker jenkins || true
+                    sudo chmod 666 /var/run/docker.sock || true
+                    '''
+                }
+            }
+        }
+
         stage('Setting up our venv environment and dependencies') {
             steps {
                 script {
@@ -53,8 +66,14 @@ pipeline {
                         # Login to ECR
                         aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
-                        # Create ECR repository if it doesn't exist
-                        aws ecr describe-repositories --repository-names ${ECR_REPO_NAME} || aws ecr create-repository --repository-name ${ECR_REPO_NAME}
+                        # Créer le repository ECR s'il n'existe pas
+                        if ! aws ecr describe-repositories --repository-names ${ECR_REPO_NAME} --region ${AWS_REGION} 2>/dev/null; then
+                            echo "Creating ECR repository: ${ECR_REPO_NAME}"
+                            aws ecr create-repository --repository-name ${ECR_REPO_NAME} --region ${AWS_REGION}
+                            sleep 5 # Attendre un peu que le repository soit complètement créé
+                        else
+                            echo "ECR repository ${ECR_REPO_NAME} already exists"
+                        fi
 
                         # Build and tag Docker image
                         docker build -t ${ECR_REPO_NAME}:latest .
@@ -100,7 +119,14 @@ pipeline {
         always {
             script {
                 echo 'Cleaning up...'
-                sh 'docker system prune -f'
+                sh '''
+                # Nettoyage Docker (seulement si les permissions sont disponibles)
+                if docker info >/dev/null 2>&1; then
+                    docker system prune -f
+                else
+                    echo "Docker not available for cleanup"
+                fi
+                '''
             }
         }
     }
