@@ -47,40 +47,6 @@ pipeline {
             }
         }
 
-        stage('Create Missing IAM Role') {
-            steps {
-                withCredentials([[
-                    $class: 'UsernamePasswordMultiBinding',
-                    credentialsId: 'aws-key',
-                    usernameVariable: 'AWS_ACCESS_KEY_ID',
-                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                ]]) {
-                    script {
-                        echo 'Creating missing IAM role: ecsTaskExecutionRole.............'
-                        sh '''
-                        # Configure AWS environment variables
-                        export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-                        export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-                        export AWS_DEFAULT_REGION=${AWS_REGION}
-
-                        # Créer le rôle manquant
-                        aws iam create-role \
-                          --role-name ecsTaskExecutionRole \
-                          --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
-
-                        # Attacher la politique nécessaire
-                        aws iam attach-role-policy \
-                          --role-name ecsTaskExecutionRole \
-                          --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-
-                        echo "Waiting for IAM role propagation..."
-                        sleep 10
-                        '''
-                    }
-                }
-            }
-        }
-
         stage('Building and Pushing Docker Image to Amazon ECR') {
             steps {
                 withCredentials([[
@@ -148,4 +114,5 @@ pipeline {
             }
         }
     }
+
 }
