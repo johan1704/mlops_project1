@@ -24,8 +24,8 @@ pipeline {
                 script {
                     echo 'Setting up Docker permissions..'
                     sh '''
-                    sudo usermod -a -G docker jenkins || true
-                    sudo chmod 666 /var/run/docker.sock || true
+                    usermod -a -G docker jenkins || true
+                    chmod 666 /var/run/docker.sock || true
                     '''
                 }
             }
@@ -60,9 +60,7 @@ pipeline {
                         export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
                         export AWS_DEFAULT_REGION=${AWS_REGION}
                         
-                        # Méthode 1: Stocker le password dans une variable
-                        ECR_PASSWORD=$(aws ecr get-login-password --region ${AWS_REGION})
-                        echo $ECR_PASSWORD | sudo -S docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                        aws ecr get-login-password --region ${AWS_REGION} | sudo docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
                         if ! aws ecr describe-repositories --repository-names ${ECR_REPO_NAME} --region ${AWS_REGION} 2>/dev/null; then
                             echo "Creating ECR repository: ${ECR_REPO_NAME}"
